@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, Button } from "react-native";
+import { createClient } from "microcms-js-sdk";
 import { Pedometer } from "expo-sensors";
 interface StepCountResult {
   steps: number;
@@ -7,9 +8,17 @@ interface StepCountResult {
 interface Subscription {
   remove: () => void;
 }
+
+export const client = createClient({
+  serviceDomain: "botope",
+  apiKey: "XviQ17wKeZlAxeAiixIDIoxJQupRpWLR1UxV"
+});
+
+
 export default function App() {
   const [isPedometerAvailable, setIsPedometerAvailable] =
     useState<string>("checking");
+  const [userId, setUserId] = useState<string>('')
   const [pastStepCount, setPastStepCount] = useState<number>(0);
   const [currentStepCount, setCurrentStepCount] = useState<number>(0);
   const subscribe = async (): Promise<Subscription | undefined> => {
@@ -28,6 +37,26 @@ export default function App() {
       });
     }
   };
+
+  useEffect(() => {
+    client.get({
+      endpoint: 'user_info',
+      queries: { orders: 'createdAt' }
+    })
+    .then((res) => setUserId(res.contents[0].USER_ID));
+  }, [])
+
+  const addUserId = () => {
+    const date = new Date().toString()
+    client
+      .create({
+        endpoint: 'user_info',
+        content: {USER_ID:date},
+      })
+      .then((res) => setUserId(date))
+      .catch(() => setUserId("unko"));
+  }
+
   useEffect(() => {
     const subscription = subscribe();
     return () => {
@@ -43,6 +72,8 @@ export default function App() {
       <Text>Pedometer.isAvailableAsync(): {isPedometerAvailable}</Text>
       <Text>Steps taken in the last 24 hours: {pastStepCount}</Text>
       <Text>Walk! And watch this go up: {currentStepCount}</Text>
+      <Text>userId: {userId}</Text>
+      <Button onPress={addUserId} title="追加" />
     </View>
   );
 }
